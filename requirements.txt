@@ -1,0 +1,5 @@
+python-telegram-bot==22.8
+python-dotenv>=1.0.1
+pandas>=2.2,<3
+numpy>=1.26
+pyquotex
