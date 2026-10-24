@@ -335,14 +335,21 @@ async def callback(update,ctx):
         sel=CATEGORIES.copy() if v=='ALL' else (sel+[v] if v not in sel else [x for x in sel if x!=v])
         bot.db.save_user(uid,categories=sel);await q.edit_message_text('Choose market categories, then continue:',reply_markup=categories_kb(sel));return
     if data.startswith('pairs:') or data.startswith('pair:'):
-        allpairs=await bot.provider.pairs();cats=user['categories'];allpairs=[p for p in allpairs if not cats or p['category'] in cats]
-        selected=user['pairs'];page=0
-        if data.startswith('pair:'):
-            val=data[5:];selected=selected+[val] if val not in selected else [x for x in selected if x!=val];bot.db.save_user(uid,pairs=selected)
-        elif data=='pairs:ALL':selected=[p['pair'] for p in allpairs];bot.db.save_user(uid,pairs=selected)
+        allpairs=await bot.provider.pairs()
+        cats=user['categories']
+        allpairs=[p for p in allpairs if not cats or p['category'] in cats]
+        selected=user['pairs']
+        page=0
+        if data == 'pairs:ALL':
+            selected=[p['pair'] for p in allpairs]
+            bot.db.save_user(uid,pairs=selected)
+        elif data.startswith('pair:'):
+            val=data[5:]
+            selected=selected+[val] if val not in selected else [x for x in selected if x!=val]
+            bot.db.save_user(uid,pairs=selected)
         else:
-            try:page=max(0,int(data.split(':',1)[1]))
-            except ValueError:page=0
+            try: page=max(0,int(data.split(':',1)[1]))
+            except ValueError: page=0
         await q.edit_message_text('Select pairs (8 per page):',reply_markup=pairs_kb(allpairs,selected,page));return
     if data=='strategies':await q.edit_message_text('Choose strategies:',reply_markup=strategies_kb(user['strategies']));return
     if data.startswith('strat:'):
@@ -387,5 +394,13 @@ def main():
     for cmd,fn in [('start',start_cmd),('help',help_cmd),('status',status_cmd),('stats',stats_cmd),('STMOP',stmop),('STMON',stmon),('STMUTO',stmuto)]:app.add_handler(CommandHandler(cmd,fn))
     app.add_handler(CallbackQueryHandler(callback))
     log.info('STM PRO BOT starting; mode=%s strategies=%s',cfg.mode,','.join(sorted(cfg.enabled)))
+    # Python 3.14 no longer implicitly creates the main-thread event loop.
+    # python-telegram-bot's run_polling() expects one to exist before it starts.
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
     app.run_polling(allowed_updates=['message','callback_query'])
-if __name__=='__main__':main()
+
+if __name__=='__main__':
+    main()
